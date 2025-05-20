@@ -214,3 +214,77 @@ class APIRightViewSet(viewsets.ModelViewSet):
     queryset = APIRight.objects.all()
     serializer_class = APIRightSerializer
     permission_classes = [IsAuthenticated]
+
+
+import os
+import json
+from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .pagination import DataLakePagination
+
+
+class DataLakeAPIView(APIView):
+    def get(self, request):
+        data_lake_dir = os.path.join(settings.BASE_DIR, 'data_lake')
+        all_data = []
+
+        # Parcours récursif de tous les fichiers JSON dans les sous-dossiers
+        for root, dirs, files in os.walk(data_lake_dir):
+            for filename in files:
+                if filename.endswith('.json'):
+                    file_path = os.path.join(root, filename)
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                            if isinstance(data, dict):
+                                data = [data]  # normaliser
+                            for record in data:
+                                record['__source_file'] = filename
+                            all_data.extend(data)
+                    except Exception as e:
+                        print(f"Erreur lors de la lecture de {filename} : {e}")
+
+        if not all_data:
+            return Response({"message": "Aucune donnée trouvée."}, status=status.HTTP_204_NO_CONTENT)
+
+        # 🔎 Filtres dynamiques
+        filter_fields = [
+            'payment_method', 'country', 'product_category', 'status',
+            'amount', 'customer_rating'
+        ]
+        filtered_data = all_data
+        for field in filter_fields:
+            exact = request.query_params.get(field)
+            gt = request.query_params.get(f'{field}__gt')
+            lt = request.query_params.get(f'{field}__lt')
+
+            if exact is not None:
+                filtered_data = [d for d in filtered_data if str(d.get(field)) == exact]
+            if gt is not None:
+                filtered_data = [d for d in filtered_data if _is_number(d.get(field)) and float(d[field]) > float(gt)]
+            if lt is not None:
+                filtered_data = [d for d in filtered_data if _is_number(d.get(field)) and float(d[field]) < float(lt)]
+
+        # 🔍 Projection (fields=name,amount,country,...)
+        fields_param = request.query_params.get('fields')
+        if fields_param:
+            selected_fields = fields_param.split(',')
+            filtered_data = [
+                {key: record.get(key) for key in selected_fields if key in record}
+                for record in filtered_data
+            ]
+
+        # 📄 Pagination
+        paginator = DataLakePagination()
+        paginated_data = paginator.paginate_queryset(filtered_data, request)
+        return paginator.get_paginated_response(paginated_data)
+
+
+def _is_number(value):
+    try:
+        float(value)
+        return True
+    except (TypeError, ValueError):
+        return False

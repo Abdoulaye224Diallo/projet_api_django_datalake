@@ -10,3 +10,4 @@ class ProductAdmin(admin.ModelAdmin):
 @admin.register(APIRight)
 class APIRightAdmin(admin.ModelAdmin):
     list_display = ('id', 'endpoint_name', 'token', 'can_access')
+

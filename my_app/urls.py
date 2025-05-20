@@ -11,6 +11,18 @@ from .views import ProductListView, APIRightViewSet
 router = DefaultRouter()
 router.register(r'rights', APIRightViewSet)
 
+from .views_metrics import (
+    SpentLast5MinutesView,
+    TotalSpentPerUserTransactionView,
+    TopProductsView,
+)
+
+from my_app.views_lineage import DataVersionView
+from my_app.views_search import FullTextSearchView
+from my_app.views_rpc import TriggerMLTrainingView
+from my_app.views_kafka import RepushTransactionView
+
+
 urlpatterns = [ 
     path("test_json_view", views.test_json_view, name="test_json_view"), 
     path('products/', get_all_products, name='get_all_products'),
@@ -20,6 +32,17 @@ urlpatterns = [
 
      path('api/products/', ProductListView.as_view(), name='products'),
     path('api/', include(router.urls)),
+    path('api/metrics/spent_last_5_minutes/', SpentLast5MinutesView.as_view(), name='spent-last-5-mins'),
+    path('api/metrics/spent_per_user_transaction/', TotalSpentPerUserTransactionView.as_view(), name='spent-per-user'),
+    path('api/metrics/top_products/', TopProductsView.as_view(), name='top-products'),
+    path("api/data/version/", DataVersionView.as_view(), name="data-version"),
+    path("api/search/full/", FullTextSearchView.as_view(), name="full-text-search"),
+    path("api/ml/train/", TriggerMLTrainingView.as_view(), name="ml-train"),
+        path("api/kafka/repush_transaction/", RepushTransactionView.as_view(), name="repush-transaction"),
+
+
+
+
 
 ] 
 
