@@ -196,3 +196,21 @@ APIRight.objects.create(
     token='abc123',
     can_access=True
 )
+
+
+
+from rest_framework import viewsets, generics
+from .models import Product, APIRight
+from .serializers import ProductSerializer, APIRightSerializer
+from rest_framework.permissions import IsAuthenticated
+from .permissions import HasEndpointAccess
+
+class ProductListView(generics.ListCreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticated, HasEndpointAccess]
+
+class APIRightViewSet(viewsets.ModelViewSet):
+    queryset = APIRight.objects.all()
+    serializer_class = APIRightSerializer
+    permission_classes = [IsAuthenticated]
